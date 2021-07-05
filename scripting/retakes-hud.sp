@@ -70,7 +70,7 @@ public void OnPluginStart()
 
     HookConVarChange(g_h_sm_retakes_hud_enabled, RetakesHudEnabledChanged);
 
-    AutoExecConfig(true, "retakehud");
+    AutoExecConfig(true, "retakes_hud", "sourcemod/retakes");
     HookEvent("round_start", Event_OnRoundStart, EventHookMode_Pre);
 
     g_RetakesLoaded = LibraryExists("retakes");
