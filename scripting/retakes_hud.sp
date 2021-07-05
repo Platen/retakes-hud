@@ -67,6 +67,7 @@ public void OnPluginStart()
   HookConVarChange(cvar_plugin_enabled, HudEnabledChanged);
 
   cvar_style = CreateConVar("sm_retakes_hud_style", "1", "1: HUD, 2: Hint Text, 3: Chat | You can also use multiple by doing 123", _, true, 0.0, true, 123.0);
+  HookConVarChange(cvar_style, StyleChanged);
 
   cvar_red = CreateConVar("sm_retakes_hud_red", "255", "How much red would you like?", _, true, 0.0, true, 255.0);
   cvar_green = CreateConVar("sm_retakes_hud_green", "255", "How much green would you like?", _, true, 0.0, true, 255.0);
@@ -123,6 +124,10 @@ public int HudEnabledChanged(Handle cvar, const char[] oldValue, const char[] ne
 
 public int RetakesEnabledChanged(Handle cvar, const char[] oldValue, const char[] newValue) {
   retakesEnabled = !StrEqual(newValue, "0");
+}
+
+public int StyleChanged(Handle cvar, const char[] oldValue, const char[] newValue) {
+  GetConVarString(cvar_style, style, sizeof(style));
 }
 
 public void Event_OnRoundStart(Handle event, const char[] name, bool dontBroadcast)
