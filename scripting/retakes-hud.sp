@@ -2,13 +2,15 @@
 #include <sdktools>
 #include <cstrike>
 
+#include "include/retakes.inc"
+
 #pragma semicolon 1
 #pragma newdecls required
 
+bool g_RetakesHudEnabled = false;
 ConVar g_h_sm_retakes_hud_enabled = null;
 
 Handle cvar_autoplant_enabled = null;
-Handle cvar_retakes_enabled = null;
 Handle cvar_red = null;
 Handle cvar_green = null;
 Handle cvar_blue = null;
@@ -18,6 +20,8 @@ Handle cvar_xcord = null;
 Handle cvar_ycord = null;
 Handle cvar_holdtime = null;
 Handle cvar_showterrorists = null;
+
+bool g_RetakesLoaded = false;
 
 bool autoplantEnabled;
 bool showTerrorists;
@@ -52,9 +56,8 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
     g_h_sm_retakes_hud_enabled = CreateConVar("sm_retakes_hud_enabled", "0", "Should we display HUD?");
-    
+
     cvar_autoplant_enabled = FindConVar("sm_autoplant_enabled");
-    cvar_retakes_enabled = FindConVar("sm_retakes_enabled");
     cvar_red = CreateConVar("sm_redhud", "255");
     cvar_green = CreateConVar("sm_greenhud", "255");
     cvar_blue = CreateConVar("sm_bluehud", "255");
@@ -65,14 +68,41 @@ public void OnPluginStart()
     cvar_ycord = CreateConVar("sm_ycord", "0.3");
     cvar_showterrorists = CreateConVar("sm_showterrorists", "1", "Should we display HUD to terrorists?");
 
+    HookConVarChange(g_h_sm_retakes_hud_enabled, RetakesHudEnabledChanged);
+
     AutoExecConfig(true, "retakehud");
     HookEvent("round_start", Event_OnRoundStart, EventHookMode_Pre);
+
+    g_RetakesLoaded = LibraryExists("retakes");
+}
+
+public void OnLibraryAdded(const char[] name) {
+  g_RetakesLoaded = LibraryExists("retakes");
+}
+
+public void OnLibraryRemoved(const char[] name) {
+  g_RetakesLoaded = LibraryExists("retakes");
+}
+
+public int RetakesHudEnabledChanged(Handle cvar, const char[] oldValue, const char[] newValue) {
+    bool wasEnabled = g_RetakesHudEnabled;
+    bool nowEnabled = !StrEqual(newValue, "0");
+
+    if (nowEnabled && (!g_RetakesLoaded || !Retakes_Enabled())) {
+        nowEnabled = false;
+    }
+
+    if (wasEnabled && !nowEnabled) {
+        g_RetakesHudEnabled = false;
+    } else if (!wasEnabled && nowEnabled) {
+        g_RetakesHudEnabled = true;
+    }
 }
 
 public void OnConfigsExecuted()
 {
     autoplantEnabled = false;
-    
+
     if (cvar_autoplant_enabled != null)
     {
         autoplantEnabled = GetConVarBool(cvar_autoplant_enabled);
@@ -91,17 +121,15 @@ public void OnConfigsExecuted()
 
 public void Event_OnRoundStart(Handle event, const char[] name, bool dontBroadcast)
 {
-    if (GetConVarInt(cvar_retakes_enabled) == 0 || g_h_sm_retakes_hud_enabled.IntValue == 0)
-    {
+    if (!g_RetakesHudEnabled)
         return;
-    }
 
     bomber = GetBomber();
-    
+
     if (IsValidClient(bomber))
     {
         bombsite = GetNearestBombsite(bomber);
-        
+
         CreateTimer(1.0, displayHud);
     }
 }
@@ -112,7 +140,7 @@ public Action displayHud(Handle timer)
     {
         return;
     }
-    
+
     char bombsiteStr[1];
     bombsiteStr = bombsite == BOMBSITE_A ? "A" : "B";
 
@@ -121,9 +149,9 @@ public Action displayHud(Handle timer)
         if (IsValidClient(i))
         {
             int clientTeam = GetClientTeam(i);
-            
+
             SetHudTextParams(xcord, ycord, holdtime, red, green, blue, 255, 0, 0.25, fadein, fadeout);
-            
+
             if (!autoplantEnabled && i == bomber)
             {
                 ShowHudText(i, 5, "Plant the bomb!");
@@ -150,7 +178,7 @@ stock int GetBomber()
             return i;
         }
     }
-    
+
     return -1;
 }
 
@@ -163,25 +191,25 @@ stock int GetNearestBombsite(int client)
 {
     float pos[3];
     GetClientAbsOrigin(client, pos);
-    
+
     int playerManager = FindEntityByClassname(INVALID_ENT_REFERENCE, "cs_player_manager");
     if (playerManager == INVALID_ENT_REFERENCE)
     {
         return BOMBSITE_INVALID;
     }
-    
+
     float aCenter[3], bCenter[3];
     GetEntPropVector(playerManager, Prop_Send, "m_bombsiteCenterA", aCenter);
     GetEntPropVector(playerManager, Prop_Send, "m_bombsiteCenterB", bCenter);
-    
+
     float aDist = GetVectorDistance(aCenter, pos, true);
     float bDist = GetVectorDistance(bCenter, pos, true);
-    
+
     if (aDist < bDist)
     {
         return BOMBSITE_A;
     }
-    
+
     return BOMBSITE_B;
 }
 
