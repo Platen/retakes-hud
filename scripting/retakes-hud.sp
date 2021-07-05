@@ -5,7 +5,10 @@
 #pragma semicolon 1
 #pragma newdecls required
 
+ConVar g_h_sm_retakes_hud_enabled = null;
+
 Handle cvar_autoplant_enabled = null;
+Handle cvar_retakes_enabled = null;
 Handle cvar_red = null;
 Handle cvar_green = null;
 Handle cvar_blue = null;
@@ -48,7 +51,10 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+    g_h_sm_retakes_hud_enabled = CreateConVar("sm_retakes_hud_enabled", "0", "Should we display HUD?");
+    
     cvar_autoplant_enabled = FindConVar("sm_autoplant_enabled");
+    cvar_retakes_enabled = FindConVar("sm_retakes_enabled");
     cvar_red = CreateConVar("sm_redhud", "255");
     cvar_green = CreateConVar("sm_greenhud", "255");
     cvar_blue = CreateConVar("sm_bluehud", "255");
@@ -66,7 +72,7 @@ public void OnPluginStart()
 public void OnConfigsExecuted()
 {
     autoplantEnabled = false;
-	
+    
     if (cvar_autoplant_enabled != null)
     {
         autoplantEnabled = GetConVarBool(cvar_autoplant_enabled);
@@ -85,14 +91,19 @@ public void OnConfigsExecuted()
 
 public void Event_OnRoundStart(Handle event, const char[] name, bool dontBroadcast)
 {
-	bomber = GetBomber();
-	
-	if (IsValidClient(bomber))
-	{
-		bombsite = GetNearestBombsite(bomber);
-		
-		CreateTimer(1.0, displayHud);
-	}
+    if (GetConVarInt(cvar_retakes_enabled) == 0 || g_h_sm_retakes_hud_enabled.IntValue == 0)
+    {
+        return;
+    }
+
+    bomber = GetBomber();
+    
+    if (IsValidClient(bomber))
+    {
+        bombsite = GetNearestBombsite(bomber);
+        
+        CreateTimer(1.0, displayHud);
+    }
 }
 
 public Action displayHud(Handle timer)
@@ -132,15 +143,15 @@ stock bool IsWarmup()
 
 stock int GetBomber()
 {
-	for (int i = 1; i <= MaxClients; i++)
-	{
-		if (IsValidClient(i) && HasBomb(i))
-		{
-			return i;
-		}
-	}
-	
-	return -1;
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        if (IsValidClient(i) && HasBomb(i))
+        {
+            return i;
+        }
+    }
+    
+    return -1;
 }
 
 stock bool HasBomb(int client)
@@ -150,28 +161,28 @@ stock bool HasBomb(int client)
 
 stock int GetNearestBombsite(int client)
 {
-	float pos[3];
-	GetClientAbsOrigin(client, pos);
-	
-	int playerManager = FindEntityByClassname(INVALID_ENT_REFERENCE, "cs_player_manager");
-	if (playerManager == INVALID_ENT_REFERENCE)
-	{
-		return BOMBSITE_INVALID;
-	}
-	
-	float aCenter[3], bCenter[3];
-	GetEntPropVector(playerManager, Prop_Send, "m_bombsiteCenterA", aCenter);
-	GetEntPropVector(playerManager, Prop_Send, "m_bombsiteCenterB", bCenter);
-	
-	float aDist = GetVectorDistance(aCenter, pos, true);
-	float bDist = GetVectorDistance(bCenter, pos, true);
-	
-	if (aDist < bDist)
-	{
-		return BOMBSITE_A;
-	}
-	
-	return BOMBSITE_B;
+    float pos[3];
+    GetClientAbsOrigin(client, pos);
+    
+    int playerManager = FindEntityByClassname(INVALID_ENT_REFERENCE, "cs_player_manager");
+    if (playerManager == INVALID_ENT_REFERENCE)
+    {
+        return BOMBSITE_INVALID;
+    }
+    
+    float aCenter[3], bCenter[3];
+    GetEntPropVector(playerManager, Prop_Send, "m_bombsiteCenterA", aCenter);
+    GetEntPropVector(playerManager, Prop_Send, "m_bombsiteCenterB", bCenter);
+    
+    float aDist = GetVectorDistance(aCenter, pos, true);
+    float bDist = GetVectorDistance(bCenter, pos, true);
+    
+    if (aDist < bDist)
+    {
+        return BOMBSITE_A;
+    }
+    
+    return BOMBSITE_B;
 }
 
 stock bool IsValidClient(int client)
